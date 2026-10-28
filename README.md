@@ -32,7 +32,7 @@ Danach erscheint „Baby-Tagebuch“ in der Seitenleiste.
 
 Die LMS-Parameter stammen aus dem R-Paket [childsds](https://cran.r-project.org/package=childsds) von Mandy Vogel (GPL-3). Deshalb steht auch dieses Projekt unter der GPL-3.0.
 
-Voigt-Werte für 40–43 SSW und für den Kopfumfang bei Geburt sind noch nicht enthalten.
+Enthalten sind nur Referenzwerte, die über childsds unter GPL-3 frei verfügbar sind. Für 40–43 SSW und für den Kopfumfang bei Geburt gibt es deshalb keine Voigt-Einordnung.
 
 ## Lizenz
 
