@@ -1,0 +1,14 @@
+{
+  "domain": "baby_tagebuch",
+  "name": "Baby-Tagebuch",
+  "codeowners": ["@ngehlich"],
+  "config_flow": true,
+  "dependencies": ["http", "frontend", "panel_custom", "websocket_api"],
+  "documentation": "https://github.com/ngehlich/baby-tagebuch-ha",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/ngehlich/baby-tagebuch-ha/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "1.0.1"
+}
