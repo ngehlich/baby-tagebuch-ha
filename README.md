@@ -32,7 +32,7 @@ Neue Version veröffentlichen:
 
 1. `version` in `custom_components/baby_tagebuch/manifest.json` hochzählen
 2. Abschnitt `## <version>` in `CHANGELOG.md` ergänzen
-3. Tag `v<version>` setzen und pushen – der Workflow „Release“ erstellt das GitHub-Release
+3. Auf `main` mergen – der Workflow „Release“ legt Tag und GitHub-Release `v<version>` automatisch an
 
 ## Referenzdaten
 
