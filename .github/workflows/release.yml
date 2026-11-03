@@ -8,6 +8,7 @@ on:
     paths:
       - custom_components/baby_tagebuch/manifest.json
       - CHANGELOG.md
+      - .github/workflows/release.yml
   workflow_dispatch:
 
 permissions:
