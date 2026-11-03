@@ -1,0 +1,41 @@
+name: Release
+
+# Ein Tag wie v1.0.2 erzeugt ein GitHub-Release. HACS bietet dann nur noch
+# Releases als Update an, nicht mehr jeden Commit auf main.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version im Manifest muss zum Tag passen
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          manifest="$(jq -r .version custom_components/baby_tagebuch/manifest.json)"
+          if [ "$tag" != "$manifest" ]; then
+            echo "::error::Tag v$tag passt nicht zu manifest.json ($manifest)"
+            exit 1
+          fi
+
+      - name: Release-Notizen aus CHANGELOG.md
+        run: |
+          awk -v v="${GITHUB_REF_NAME#v}" '
+            /^## / { if (found) exit; if (index($0, "## " v) == 1) { found = 1; next } }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "::error::Kein Abschnitt '## ${GITHUB_REF_NAME#v}' in CHANGELOG.md"
+            exit 1
+          fi
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body_path: notes.md

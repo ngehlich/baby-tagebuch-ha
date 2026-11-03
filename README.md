@@ -24,6 +24,16 @@ Eine Baby-Tagebuch-App als eigener Menüpunkt in Home Assistant. Die Daten liege
 
 Danach erscheint „Baby-Tagebuch“ in der Seitenleiste.
 
+## Updates und neue Versionen
+
+HACS bietet nur veröffentlichte Releases als Update an. Änderungen auf `main` (z. B. an der README) lösen kein Update aus.
+
+Neue Version veröffentlichen:
+
+1. `version` in `custom_components/baby_tagebuch/manifest.json` hochzählen
+2. Abschnitt `## <version>` in `CHANGELOG.md` ergänzen
+3. Tag `v<version>` setzen und pushen – der Workflow „Release“ erstellt das GitHub-Release
+
 ## Referenzdaten
 
 - **Bei Geburt (23–39 SSW):** Voigt et al., Perzentilen für Körpermaße Neugeborener (Frühgeborenenkorrektur)
