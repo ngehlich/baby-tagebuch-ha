@@ -1,0 +1,23 @@
+stillen_starten:
+  name: Stillen starten
+  description: Startet den Still-Timer auf der gewählten Seite oder wechselt auf diese Seite. Ohne Angabe die vorgeschlagene nächste Seite.
+  fields:
+    seite:
+      name: Seite
+      description: links, rechts oder naechste (Gegenseite vom letzten Mal)
+      default: naechste
+      selector:
+        select:
+          options:
+            - links
+            - rechts
+            - naechste
+stillen_wechseln:
+  name: Stillen Seite wechseln
+  description: Wechselt beim laufenden Still-Timer auf die andere Seite. Läuft keiner, startet er auf der nächsten Seite.
+stillen_beenden:
+  name: Stillen beenden
+  description: Beendet den laufenden Still-Timer und speichert die Mahlzeit.
+stillen_umschalten:
+  name: Stillen starten oder beenden
+  description: Läuft ein Still-Timer, wird er beendet; sonst startet er auf der nächsten Seite.

@@ -1,4 +1,4 @@
-/* Baby-Tagebuch 1.1.0 – Offline-App */
+/* Baby-Tagebuch 1.2.0 – Offline-App */
 
 "use strict";
 /* ===== Referenzdaten =====

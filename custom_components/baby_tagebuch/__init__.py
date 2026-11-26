@@ -31,10 +31,12 @@ from homeassistant.helpers.dispatcher import (
 from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.helpers.storage import Store
 
+from .stillen import async_register_services
+
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "baby_tagebuch"
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 STORAGE_VERSION = 1
 PANEL_URL = "baby-tagebuch"
 STATIC_BASE = "/baby_tagebuch_static"
@@ -202,6 +204,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         websocket_api.async_register_command(hass, ws_sync)
         websocket_api.async_register_command(hass, ws_subscribe)
         websocket_api.async_register_command(hass, ws_info)
+        async_register_services(hass, DOMAIN, SIGNAL)
         hass.data[REGISTERED] = True
 
     await panel_custom.async_register_panel(

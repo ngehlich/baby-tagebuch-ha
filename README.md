@@ -26,6 +26,19 @@ Der Menüpunkt in Home Assistant braucht eine Verbindung. Für Orte ohne Netz (z
 
 Danach startet die App auch ohne Verbindung. Einträge bleiben auf dem Handy und werden automatisch abgeglichen, sobald Home Assistant wieder erreichbar ist. Offline funktioniert nur über eine https-Adresse, nicht über die lokale IP. Klappt die Anmeldung nicht, kann unter *Mehr* ein langlebiges Zugangstoken eingefügt werden.
 
+## Sprachsteuerung (z. B. Alexa)
+
+Die Integration bringt Aktionen mit, die den Still-Timer der App steuern:
+
+| Aktion | Wirkung |
+|---|---|
+| `baby_tagebuch.stillen_starten` | startet links/rechts/nächste Seite, bzw. wechselt dorthin |
+| `baby_tagebuch.stillen_wechseln` | wechselt auf die andere Seite |
+| `baby_tagebuch.stillen_beenden` | beendet und speichert die Mahlzeit |
+| `baby_tagebuch.stillen_umschalten` | startet, wenn nichts läuft, sonst beenden |
+
+Jede Aktion gibt einen Satz zurück (`nachricht`), den ein Skript vorlesen lassen kann. Für Alexa: Skripte anlegen, die diese Aktionen aufrufen, an Alexa freigeben (Home Assistant Cloud) und in der Alexa-App eine Routine mit eigenem Sprachbefehl darauf legen.
+
 ## Installation über HACS
 
 1. HACS → ⋮ → *Benutzerdefinierte Repositories* → `https://github.com/ngehlich/baby-tagebuch-ha`, Typ *Integration*
