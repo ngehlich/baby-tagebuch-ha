@@ -14,7 +14,17 @@ Eine Baby-Tagebuch-App als eigener Menüpunkt in Home Assistant. Die Daten liege
 - **Vorsorge:** U1–U9 mit Zeitfenstern ab Geburtsdatum, Impfliste, tägliche Häkchen (z. B. Vitamin D)
 - Temperatur, Medikamente, Notizen, Meilensteine, 7-Tage-Statistik
 - **Rückgängig** für die letzten Aktionen, Nachtmodus, Export als JSON/CSV
-- **Offline-Puffer:** ohne Verbindung wird auf dem Gerät zwischengespeichert und später nachgereicht
+- **Offline-App:** startet auch ganz ohne Verbindung, Abgleich mit Home Assistant sobald wieder Netz da ist
+
+## Offline-App fürs Handy
+
+Der Menüpunkt in Home Assistant braucht eine Verbindung. Für Orte ohne Netz (z. B. Krankenhaus) gibt es zusätzlich eine eigene App, die komplett auf dem Handy läuft:
+
+1. In Home Assistant: *Baby-Tagebuch → Mehr → Offline-App öffnen* (öffnet die https-Adresse, z. B. über Nabu Casa).
+2. Im Browser zum Startbildschirm hinzufügen (iPhone: Safari → Teilen → *Zum Home-Bildschirm*; Android: Menü → *App installieren*).
+3. Die App über das neue Symbol öffnen und einmal mit Home Assistant anmelden.
+
+Danach startet die App auch ohne Verbindung. Einträge bleiben auf dem Handy und werden automatisch abgeglichen, sobald Home Assistant wieder erreichbar ist. Offline funktioniert nur über eine https-Adresse, nicht über die lokale IP. Klappt die Anmeldung nicht, kann unter *Mehr* ein langlebiges Zugangstoken eingefügt werden.
 
 ## Installation über HACS
 

@@ -1,8 +1,11 @@
 """Baby-Tagebuch: speichert die Daten der Baby-Tagebuch-App in Home Assistant.
 
 Die Daten liegen in /config/.storage/baby_tagebuch (nicht öffentlich, Teil jeder
-HA-Sicherung). Die App läuft als Menüpunkt in der Seitenleiste und ist damit
-durch den Home-Assistant-Login geschützt.
+HA-Sicherung). Die App läuft als Menüpunkt in der Seitenleiste und zusätzlich als
+Offline-App (/baby_tagebuch_static/app/index.html), die auf dem Handy ohne
+Verbindung startet und sich über die Home-Assistant-Anmeldung abgleicht.
+Die App-Dateien enthalten keine Daten; Daten gibt es nur über die
+angemeldeten Schnittstellen (WebSocket und /api/baby_tagebuch/sync).
 """
 from __future__ import annotations
 
@@ -13,24 +16,31 @@ from typing import Any
 
 import voluptuous as vol
 
+from aiohttp import web
+
 from homeassistant.components import frontend, panel_custom, websocket_api
-from homeassistant.components.http import StaticPathConfig
+from homeassistant.components.http import HomeAssistantView, StaticPathConfig
+from homeassistant.components.http.data_validator import RequestDataValidator
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.http import KEY_HASS
 from homeassistant.helpers.dispatcher import (
     async_dispatcher_connect,
     async_dispatcher_send,
 )
+from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.helpers.storage import Store
 
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "baby_tagebuch"
-VERSION = "1.0.1"
+VERSION = "1.1.0"
 STORAGE_VERSION = 1
 PANEL_URL = "baby-tagebuch"
-STATIC_URL = "/baby_tagebuch_static/baby-tagebuch-panel.js"
-PANEL_FILE = Path(__file__).parent / "baby-tagebuch-panel.js"
+STATIC_BASE = "/baby_tagebuch_static"
+STATIC_DIR = Path(__file__).parent / "www"
+PANEL_JS = f"{STATIC_BASE}/baby-tagebuch-panel.js"
+APP_PATH = f"{STATIC_BASE}/app/index.html"
 SIGNAL = f"{DOMAIN}_changed"
 REGISTERED = f"{DOMAIN}_registered"
 MAX_BATCH = 1000
@@ -77,6 +87,39 @@ class BabyStore:
         return changed, rejected
 
 
+async def async_sync(
+    hass: HomeAssistant, since: int, changes: list[dict[str, Any]]
+) -> dict[str, Any] | None:
+    """Änderungen annehmen und alles seit `since` zurückgeben (None = nicht geladen)."""
+    store: BabyStore | None = hass.data.get(DOMAIN)
+    if store is None:
+        return None
+    async with store.lock:
+        changed, rejected = store.apply(changes)
+        if changed:
+            await store.async_save()
+        full = False
+        if since > store.rev:  # Server-Daten älter als der Client (z. B. Wiederherstellung)
+            full = since > 0
+            since = 0
+        out = {k: r for k, r in store.records.items() if r["r"] > since or k in rejected}
+        rev = store.rev
+    if changed:
+        async_dispatcher_send(hass, SIGNAL, rev)
+    return {"rev": rev, "records": out, "reset": full}
+
+
+def app_url(hass: HomeAssistant) -> str | None:
+    """HTTPS-Adresse der Offline-App (Nabu Casa oder externe URL), falls vorhanden."""
+    try:
+        base = get_url(
+            hass, allow_internal=False, allow_ip=False, require_ssl=True, prefer_cloud=True
+        )
+    except NoURLAvailableError:
+        return None
+    return base.rstrip("/") + APP_PATH
+
+
 CHANGE_SCHEMA = vol.Schema(
     {
         vol.Required("k"): vol.All(str, vol.Length(min=1, max=200)),
@@ -87,40 +130,48 @@ CHANGE_SCHEMA = vol.Schema(
 )
 
 
-@websocket_api.websocket_command(
-    {
-        vol.Required("type"): "baby_tagebuch/sync",
-        vol.Optional("since", default=0): vol.Coerce(int),
-        vol.Optional("changes", default=[]): vol.All(
-            [CHANGE_SCHEMA], vol.Length(max=MAX_BATCH)
-        ),
-    }
-)
+SYNC_FIELDS = {
+    vol.Optional("since", default=0): vol.Coerce(int),
+    vol.Optional("changes", default=[]): vol.All([CHANGE_SCHEMA], vol.Length(max=MAX_BATCH)),
+}
+
+
+@websocket_api.websocket_command({vol.Required("type"): "baby_tagebuch/sync", **SYNC_FIELDS})
 @websocket_api.async_response
 async def ws_sync(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    """Änderungen annehmen und alles seit `since` zurückgeben."""
-    store: BabyStore | None = hass.data.get(DOMAIN)
-    if store is None:
+    """Abgleich über die WebSocket-Verbindung des Panels."""
+    result = await async_sync(hass, msg["since"], msg["changes"])
+    if result is None:
         connection.send_error(msg["id"], "not_loaded", "Baby-Tagebuch ist nicht eingerichtet")
         return
-    async with store.lock:
-        changed, rejected = store.apply(msg["changes"])
-        if changed:
-            await store.async_save()
-        since = msg["since"]
-        full = False
-        if since > store.rev:  # Server-Daten älter als der Client (z. B. Wiederherstellung)
-            since = 0
-            full = msg["since"] > 0
-        out = {
-            k: r for k, r in store.records.items() if r["r"] > since or k in rejected
-        }
-        rev = store.rev
-    connection.send_result(msg["id"], {"rev": rev, "records": out, "reset": full})
-    if changed:
-        async_dispatcher_send(hass, SIGNAL, rev)
+    connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command({vol.Required("type"): "baby_tagebuch/info"})
+@callback
+def ws_info(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Adresse der Offline-App für den Knopf im Panel."""
+    connection.send_result(msg["id"], {"app_url": app_url(hass), "version": VERSION})
+
+
+class SyncView(HomeAssistantView):
+    """Abgleich für die Offline-App (Anmeldung per Home-Assistant-Token)."""
+
+    url = "/api/baby_tagebuch/sync"
+    name = "api:baby_tagebuch:sync"
+    requires_auth = True
+
+    @RequestDataValidator(vol.Schema(SYNC_FIELDS))
+    async def post(self, request: web.Request, data: dict[str, Any]) -> web.Response:
+        hass: HomeAssistant = request.app[KEY_HASS]
+        result = await async_sync(hass, data["since"], data["changes"])
+        if result is None:
+            return self.json_message("Baby-Tagebuch ist nicht eingerichtet", status_code=503)
+        return self.json(result)
 
 
 @websocket_api.websocket_command({vol.Required("type"): "baby_tagebuch/subscribe"})
@@ -145,17 +196,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if not hass.data.get(REGISTERED):
         await hass.http.async_register_static_paths(
-            [StaticPathConfig(STATIC_URL, str(PANEL_FILE), False)]
+            [StaticPathConfig(STATIC_BASE, str(STATIC_DIR), False)]
         )
+        hass.http.register_view(SyncView())
         websocket_api.async_register_command(hass, ws_sync)
         websocket_api.async_register_command(hass, ws_subscribe)
+        websocket_api.async_register_command(hass, ws_info)
         hass.data[REGISTERED] = True
 
     await panel_custom.async_register_panel(
         hass,
         webcomponent_name="baby-tagebuch-panel",
         frontend_url_path=PANEL_URL,
-        module_url=f"{STATIC_URL}?v={VERSION}",
+        module_url=f"{PANEL_JS}?v={VERSION}",
         sidebar_title="Baby-Tagebuch",
         sidebar_icon="mdi:baby-bottle-outline",
         embed_iframe=True,
